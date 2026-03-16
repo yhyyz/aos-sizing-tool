@@ -12,7 +12,7 @@ fi
 
 echo "[1/3] Installing frontend dependencies..."
 cd "$FRONTEND_DIR"
-npm install --silent
+npm ci --silent
 
 echo "[2/3] Building frontend..."
 npm run build
