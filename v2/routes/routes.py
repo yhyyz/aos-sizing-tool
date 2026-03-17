@@ -130,6 +130,9 @@ async def instance_families():
                 "is_optimized": f.is_optimized,
                 "storage_backend": f.storage_backend.value,
                 "available_sizes": f.available_sizes,
+                "supported_warm_architectures": [
+                    a.value for a in f.supported_warm_architectures
+                ],
                 "has_throughput_data": bool(f.write_throughput),
             }
         )

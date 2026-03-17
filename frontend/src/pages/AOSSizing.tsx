@@ -3,6 +3,7 @@ import { FieldLabel, Input, Select, Button, Card, AlertInfo, MultiSelect } from 
 import DataTable from '@/components/DataTable'
 import DetailDrawer from '@/components/DetailDrawer'
 import { useRegions } from '@/hooks/useRegions'
+import { useInstanceFamilies } from '@/hooks/useInstanceFamilies'
 import { api, DEFAULT_PARAMS } from '@/lib/api'
 import type { SizingParams } from '@/lib/api'
 import { Calculator, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
@@ -51,26 +52,7 @@ const WARM_ARCH_OPTIONS = [
   { value: 'multi_tier', label: 'Multi-Tier (OpenSearch 3.3+)' },
 ]
 
-const OPTIMIZED_FAMILIES = ['or1', 'or2', 'om2', 'oi2']
-
-const ALL_HOT_FAMILY_OPTIONS = [
-  { value: 'or1', label: 'or1' }, { value: 'or2', label: 'or2' },
-  { value: 'om2', label: 'om2' }, { value: 'oi2', label: 'oi2' },
-  { value: 'r7g', label: 'r7g' }, { value: 'r8g', label: 'r8g' },
-  { value: 'm7g', label: 'm7g' }, { value: 'm8g', label: 'm8g' },
-  { value: 'c7g', label: 'c7g' }, { value: 'c8g', label: 'c8g' },
-]
-
-const MULTI_TIER_HOT_FAMILY_OPTIONS = ALL_HOT_FAMILY_OPTIONS.filter(
-  (o) => OPTIMIZED_FAMILIES.includes(o.value)
-)
-
-const HOT_SIZE_OPTIONS = [
-  { value: 'medium', label: 'medium' }, { value: 'large', label: 'large' },
-  { value: 'xlarge', label: 'xlarge' }, { value: '2xlarge', label: '2xlarge' },
-  { value: '4xlarge', label: '4xlarge' }, { value: '8xlarge', label: '8xlarge' },
-  { value: '12xlarge', label: '12xlarge' }, { value: '16xlarge', label: '16xlarge' },
-]
+const SIZE_ORDER = ['medium', 'large', 'xlarge', '2xlarge', '4xlarge', '8xlarge', '12xlarge', '16xlarge', '24xlarge']
 
 const ULTRAWARM_SIZE_OPTIONS = [
   { value: 'medium', label: 'medium' }, { value: 'large', label: 'large' },
@@ -84,6 +66,7 @@ const OI2_WARM_SIZE_OPTIONS = [
 
 export default function AOSSizingPage() {
   const { regions } = useRegions()
+  const { families } = useInstanceFamilies()
   const [params, setParams] = useState<SizingParams>({ ...DEFAULT_PARAMS })
   const [allData, setAllData] = useState<Record<string, unknown>[]>([])
   const [page, setPage] = useState(1)
@@ -107,14 +90,38 @@ export default function AOSSizingPage() {
     })
     if (key === 'warmArchitecture') {
       setWarmSizes([])
-      if (value === 'multi_tier') {
-        setHotFamilies((prev) => prev.filter((f) => OPTIMIZED_FAMILIES.includes(f)))
-      }
     }
   }
 
+  const hotFamilyOptions = useMemo(() => {
+    const arch = params.warmArchitecture
+    return families
+      .filter((f) => f.supported_warm_architectures.includes(arch))
+      .map((f) => ({ value: f.name, label: f.name }))
+  }, [families, params.warmArchitecture])
+
+  const hotSizeOptions = useMemo(() => {
+    const arch = params.warmArchitecture
+    const visible = families.filter((f) => f.supported_warm_architectures.includes(arch))
+    const allSizes = new Set<string>()
+    visible.forEach((f) => f.available_sizes.forEach((s) => allSizes.add(s)))
+    return SIZE_ORDER.filter((s) => allSizes.has(s)).map((s) => ({ value: s, label: s }))
+  }, [families, params.warmArchitecture])
+
   const warmSizeOptions = params.warmArchitecture === 'multi_tier' ? OI2_WARM_SIZE_OPTIONS : ULTRAWARM_SIZE_OPTIONS
-  const hotFamilyOptions = params.warmArchitecture === 'multi_tier' ? MULTI_TIER_HOT_FAMILY_OPTIONS : ALL_HOT_FAMILY_OPTIONS
+
+  useEffect(() => {
+    const validFamilies = new Set(hotFamilyOptions.map((o) => o.value))
+    setHotFamilies((prev) => {
+      const next = prev.filter((f) => validFamilies.has(f))
+      return next.length === prev.length ? prev : next
+    })
+    const validSizes = new Set(hotSizeOptions.map((o) => o.value))
+    setHotSizes((prev) => {
+      const next = prev.filter((s) => validSizes.has(s))
+      return next.length === prev.length ? prev : next
+    })
+  }, [hotFamilyOptions, hotSizeOptions])
 
   const filteredData = useMemo(() => {
     if (hotFamilies.length === 0 && hotSizes.length === 0 && warmSizes.length === 0) return allData
@@ -288,7 +295,7 @@ export default function AOSSizingPage() {
           />
           <MultiSelect
             className="w-44"
-            options={HOT_SIZE_OPTIONS}
+            options={hotSizeOptions}
             selected={hotSizes}
             onChange={setHotSizesAndReset}
             placeholder="All Sizes"

@@ -63,6 +63,15 @@ async function get<T>(url: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export interface InstanceFamilyInfo {
+  name: string
+  is_optimized: boolean
+  storage_backend: string
+  available_sizes: string[]
+  supported_warm_architectures: string[]
+  has_throughput_data: boolean
+}
+
 export const api = {
   aosSizing: (params: SizingParams) =>
     post<ApiResponse<ListResult>>('/v2/sizing/aos', params),
@@ -74,5 +83,5 @@ export const api = {
     get<ApiResponse<{ list: string[] }>>('/v2/regions'),
 
   instanceFamilies: () =>
-    get<ApiResponse<{ aos: unknown[]; ec2: unknown[] }>>('/v2/instance-families'),
+    get<ApiResponse<{ aos: InstanceFamilyInfo[]; ec2: InstanceFamilyInfo[] }>>('/v2/instance-families'),
 }
