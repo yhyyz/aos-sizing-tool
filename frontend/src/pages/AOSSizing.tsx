@@ -51,13 +51,19 @@ const WARM_ARCH_OPTIONS = [
   { value: 'multi_tier', label: 'Multi-Tier (OpenSearch 3.3+)' },
 ]
 
-const HOT_FAMILY_OPTIONS = [
+const OPTIMIZED_FAMILIES = ['or1', 'or2', 'om2', 'oi2']
+
+const ALL_HOT_FAMILY_OPTIONS = [
   { value: 'or1', label: 'or1' }, { value: 'or2', label: 'or2' },
   { value: 'om2', label: 'om2' }, { value: 'oi2', label: 'oi2' },
   { value: 'r7g', label: 'r7g' }, { value: 'r8g', label: 'r8g' },
   { value: 'm7g', label: 'm7g' }, { value: 'm8g', label: 'm8g' },
   { value: 'c7g', label: 'c7g' }, { value: 'c8g', label: 'c8g' },
 ]
+
+const MULTI_TIER_HOT_FAMILY_OPTIONS = ALL_HOT_FAMILY_OPTIONS.filter(
+  (o) => OPTIMIZED_FAMILIES.includes(o.value)
+)
 
 const HOT_SIZE_OPTIONS = [
   { value: 'medium', label: 'medium' }, { value: 'large', label: 'large' },
@@ -99,10 +105,16 @@ export default function AOSSizingPage() {
       if (key === 'warmArchitecture' && value === 'multi_tier') next.coldDays = 0
       return next
     })
-    if (key === 'warmArchitecture') setWarmSizes([])
+    if (key === 'warmArchitecture') {
+      setWarmSizes([])
+      if (value === 'multi_tier') {
+        setHotFamilies((prev) => prev.filter((f) => OPTIMIZED_FAMILIES.includes(f)))
+      }
+    }
   }
 
   const warmSizeOptions = params.warmArchitecture === 'multi_tier' ? OI2_WARM_SIZE_OPTIONS : ULTRAWARM_SIZE_OPTIONS
+  const hotFamilyOptions = params.warmArchitecture === 'multi_tier' ? MULTI_TIER_HOT_FAMILY_OPTIONS : ALL_HOT_FAMILY_OPTIONS
 
   const filteredData = useMemo(() => {
     if (hotFamilies.length === 0 && hotSizes.length === 0 && warmSizes.length === 0) return allData
@@ -269,7 +281,7 @@ export default function AOSSizingPage() {
         <div className="flex flex-wrap items-center gap-3">
           <MultiSelect
             className="w-48"
-            options={HOT_FAMILY_OPTIONS}
+            options={hotFamilyOptions}
             selected={hotFamilies}
             onChange={setHotFamiliesAndReset}
             placeholder="All Families"
