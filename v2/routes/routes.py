@@ -104,8 +104,6 @@ async def ec2_sizing(request: Request, params: EC2SizingRequest):
 
     if is_aos_specific_family(req.reqEC2Instance):
         req.reqEC2Instance = resolve_ec2_instance_type(req.reqEC2Instance)
-        if req.replicaNum == 0:
-            req.replicaNum = 1
 
     solution = EC2Solution(_data["ec2_pricing_df"], _data["ec2_instance_df"], req)
     data = solution.solve()
